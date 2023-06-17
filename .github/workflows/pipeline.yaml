@@ -14,14 +14,14 @@ env:
   TESTING_STACK_NAME: boilerplate-service-staging
   TESTING_PIPELINE_EXECUTION_ROLE: arn:aws:iam::882782905959:role/enpalm-staging-github-actions-role
   # TESTING_CLOUDFORMATION_EXECUTION_ROLE: my-cloudformation-execution-role
-  TESTING_ARTIFACTS_BUCKET: s3://boilerplate-artefact-staging
+  TESTING_ARTIFACTS_BUCKET: boilerplate-artefact-staging
   TESTING_REGION: eu-west-1
 
   # testing "sam package" and "sam deploy" commands.
   PROD_STACK_NAME: boilerplate-service-prod
   PROD_PIPELINE_EXECUTION_ROLE: arn:aws:iam::764305725019:role/enpalm-prod-github-actions-role
   # PROD_CLOUDFORMATION_EXECUTION_ROLE: my-dev-cfn-execution-role
-  PROD_ARTIFACTS_BUCKET: s3://boilerplate-artefact-prod
+  PROD_ARTIFACTS_BUCKET: boilerplate-artefact-prod
   PROD_REGION: eu-west-1
 
 permissions:
@@ -151,7 +151,7 @@ jobs:
           name: packaged-prod.yaml
           path: packaged-prod.yaml
 
-  deploy-testing:
+  deploy-staging:
     if: github.ref == 'refs/heads/main'
     needs: [build-and-package]
     runs-on: ubuntu-latest
@@ -184,7 +184,7 @@ jobs:
 
   integration-test:
     if: github.ref == 'refs/heads/main'
-    needs: [deploy-testing]
+    needs: [deploy-staging]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

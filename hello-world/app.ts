@@ -42,7 +42,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent, context: Contex
         response = {
             statusCode: 200,
             body: JSON.stringify({
-                message: 'hello world',
+                message: 'hello world2',
             }),
         };
         logger.info('This is an INFO log - sending HTTP 200 - hello world response');

@@ -54,18 +54,21 @@ Resources:
         EntryPoints:
           - app.ts
 
-  # DNSRecord:
-  #   Type: AWS::Route53::RecordSet
-  #   Condition: IsProd
-  #   Properties:
-  #     HostedZoneName: arn15.nipalm.people.aws.dev.
-  #     Name: summerparty.arn15.nipalm.people.aws.dev.
-  #     Type: A
-  #     AliasTarget:
-  #       DNSName: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/
-  #       HostedZoneId: Z2FDTNDATAQYW2
+  StaginDomainRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: IsStaging
+    Properties:
+      HostedZoneName: staging.enpalm.se.
+      Name: !Sub "{service}.staging.enpalm.se"
+      Type: A
+      AliasTarget:
+        DNSName: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/
+        HostedZoneId: Z2FDTNDATAQYW2
 
 Outputs:
   HelloWorldApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  ServiceStagingDomain:
+    Description: "DNS name"
+    Value: !Ref StaginDomainRecord

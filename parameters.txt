@@ -1,1 +1,1 @@
-service=my-boilerplate-service
+service=my-service

@@ -95,7 +95,7 @@ jobs:
       - name: Deploy to feature stack in the staging account
         shell: bash
         run: |
-          sam deploy --stack-name $(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]')-${{ github.run_id }} \
+          sam deploy --stack-name $(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') \
             --capabilities CAPABILITY_IAM \
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \

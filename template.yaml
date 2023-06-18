@@ -64,6 +64,7 @@ Resources:
   StagingApi:
     Type: AWS::Serverless::Api
     Properties:
+      Condition: IsStaging
       StageName: prod
       DefinitionBody:
         swagger: "2.0"

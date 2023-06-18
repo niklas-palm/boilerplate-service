@@ -5,6 +5,21 @@ Description: >
 
   Sample SAM Template for boilerplate-service
 
+Parameters:
+  environment:
+    Description: Environment type.
+    Type: String
+    AllowedValues: [dev, staging, prod]
+    ConstraintDescription: must specify dev, staging, or prod
+  service:
+    Description: Service name
+    Type: String
+
+Conditions:
+  IsProd: !Equals [!Ref environment, prod]
+  IsStaging: !Equals [!Ref environment, staging]
+  IsDeV: !Equals [!Ref environment, dev]
+
 Globals:
   Function:
     Timeout: 3
@@ -21,8 +36,8 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          POWERTOOLS_SERVICE_NAME: helloWorld
-          POWERTOOLS_METRICS_NAMESPACE: boilerplate-service
+          POWERTOOLS_SERVICE_NAME: !Ref service
+          POWERTOOLS_METRICS_NAMESPACE: boilerplate-namespace
           LOG_LEVEL: INFO
       Events:
         HelloWorld:
@@ -39,16 +54,18 @@ Resources:
         EntryPoints:
           - app.ts
 
+  # DNSRecord:
+  #   Type: AWS::Route53::RecordSet
+  #   Condition: IsProd
+  #   Properties:
+  #     HostedZoneName: arn15.nipalm.people.aws.dev.
+  #     Name: summerparty.arn15.nipalm.people.aws.dev.
+  #     Type: A
+  #     AliasTarget:
+  #       DNSName: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/
+  #       HostedZoneId: Z2FDTNDATAQYW2
+
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   HelloWorldApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn

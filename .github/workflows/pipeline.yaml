@@ -87,6 +87,11 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: Add environment to parameters file
+        shell: bash
+        run: |
+          echo "environment=dev" >> parameters.txt
+
       - name: Deploy to feature stack in the testing account
         shell: bash
         run: |
@@ -95,7 +100,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --tags environment=development
+            --tags environment=dev
 
   build-and-package:
     if: github.ref == 'refs/heads/main'
@@ -174,6 +179,11 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: Add environment to parameters file
+        shell: bash
+        run: |
+          echo "environment=staging" >> parameters.txt
+
       - name: Deploy to testing account
         run: |
           sam deploy --stack-name ${TESTING_STACK_NAME} \
@@ -217,6 +227,11 @@ jobs:
           role-session-name: prod-deployment
           role-duration-seconds: 3600
           role-skip-session-tagging: true
+
+      - name: Add environment to parameters file
+        shell: bash
+        run: |
+          echo "environment=prod" >> parameters.txt
 
       - name: Deploy to production account
         run: |

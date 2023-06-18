@@ -61,17 +61,6 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${HelloWorldFunction}"
       RetentionInDays: 7
 
-  # StagingDomainRecord:
-  #   Type: AWS::Route53::RecordSet
-  #   Condition: IsStaging
-  #   Properties:
-  #     HostedZoneName: staging.enpalm.se.
-  #     Name: !Sub "${service}.staging.enpalm.se"
-  #     Type: A
-  #     AliasTarget:
-  #       DNSName: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/
-  #       HostedZoneId: Z2FDTNDATAQYW2
-
   StagingApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -86,11 +75,12 @@ Resources:
             get:
               x-amazon-apigateway-integration:
                 type: "aws_proxy"
+                httpMethod: "POST"
                 uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloWorldFunction.Arn}/invocations"
         # Add more API configuration here
       EndpointConfiguration: REGIONAL
       Domain:
-        DomainName: service.staging.enpalm.se
+        DomainName: !Sub "${service}.staging.enpalm.se"
         CertificateArn: arn:aws:acm:eu-west-1:882782905959:certificate/15e827bc-7b76-4026-a656-db6971dfa689
         Route53:
           HostedZoneName: staging.enpalm.se.
@@ -99,3 +89,5 @@ Outputs:
   StagingApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
     Value: !Sub "https://${StagingApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+  ServiceDomainName:
+    Value: !Sub "https://${service}.staging.enpalm.se"

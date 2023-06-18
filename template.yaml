@@ -59,7 +59,7 @@ Resources:
     Condition: IsStaging
     Properties:
       HostedZoneName: staging.enpalm.se.
-      Name: !Sub "{service}.staging.enpalm.se"
+      Name: !Sub "${service}.staging.enpalm.se"
       Type: A
       AliasTarget:
         DNSName: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/

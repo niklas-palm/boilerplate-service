@@ -45,7 +45,7 @@ jobs:
         with:
           use-installer: true
 
-      - name: Assume the testing pipeline user role
+      - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-region: ${{ env.TESTING_REGION }}
@@ -78,7 +78,7 @@ jobs:
           use-installer: true
       - run: sam build --template ${SAM_TEMPLATE} --use-container
 
-      - name: Assume the testing pipeline user role
+      - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-region: ${{ env.TESTING_REGION }}
@@ -92,7 +92,7 @@ jobs:
         run: |
           echo "environment=dev" >> parameters.txt
 
-      - name: Deploy to feature stack in the testing account
+      - name: Deploy to feature stack in the staging account
         shell: bash
         run: |
           sam deploy --stack-name $(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]')-${{ github.run_id }} \
@@ -100,6 +100,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
+            --parameter-overrides $(cat parameters.txt) \
             --tags environment=dev
 
   build-and-package:
@@ -115,7 +116,7 @@ jobs:
       - name: Build resources
         run: sam build --template ${SAM_TEMPLATE} --use-container
 
-      - name: Assume the testing pipeline user role
+      - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-region: ${{ env.TESTING_REGION }}
@@ -124,7 +125,7 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - name: Upload artifacts to testing artifact buckets
+      - name: Upload artifacts to stsaging artifact buckets
         run: |
           sam package \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
@@ -170,7 +171,7 @@ jobs:
         with:
           name: packaged-testing.yaml
 
-      - name: Assume the testing pipeline user role
+      - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-region: ${{ env.TESTING_REGION }}
@@ -184,7 +185,7 @@ jobs:
         run: |
           echo "environment=staging" >> parameters.txt
 
-      - name: Deploy to testing account
+      - name: Deploy to staging account
         run: |
           sam deploy --stack-name ${TESTING_STACK_NAME} \
             --template packaged-testing.yaml \
@@ -192,6 +193,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
+            --parameter-overrides $(cat parameters.txt) \
             --tags environment=staging
 
   integration-test:
@@ -241,4 +243,5 @@ jobs:
             --region ${PROD_REGION} \
             --s3-bucket ${PROD_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
+            --parameter-overrides $(cat parameters.txt) \
             --tags environment=prod

@@ -82,7 +82,7 @@ Resources:
           title: "Staging API"
           version: "1.0"
         paths:
-          /hello:
+          /:
             get:
               x-amazon-apigateway-integration:
                 type: "aws_proxy"
@@ -93,7 +93,7 @@ Resources:
         DomainName: service.staging.enpalm.se
         CertificateArn: arn:aws:acm:eu-west-1:882782905959:certificate/15e827bc-7b76-4026-a656-db6971dfa689
         Route53:
-          HostedZoneName: staging.enpalm.se
+          HostedZoneName: staging.enpalm.se.
 
 Outputs:
   StagingApi:

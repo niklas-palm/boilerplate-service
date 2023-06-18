@@ -41,10 +41,11 @@ Resources:
           LOG_LEVEL: INFO
       Events:
         HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: Api
           Properties:
-            Path: /hello
-            Method: get
+            RestApiId: !Ref StagingApi
+            Path: /
+            Method: GET
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -54,21 +55,47 @@ Resources:
         EntryPoints:
           - app.ts
 
-  StaginDomainRecord:
-    Type: AWS::Route53::RecordSet
-    Condition: IsStaging
+  MyFunctionLogGroup: #To ensure Logs are deleted after a while.
+    Type: AWS::Logs::LogGroup
     Properties:
-      HostedZoneName: staging.enpalm.se.
-      Name: !Sub "${service}.staging.enpalm.se"
-      Type: A
-      AliasTarget:
-        DNSName: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/
-        HostedZoneId: Z2FDTNDATAQYW2
+      LogGroupName: !Sub "/aws/lambda/${HelloWorldFunction}"
+      RetentionInDays: 7
+
+  # StagingDomainRecord:
+  #   Type: AWS::Route53::RecordSet
+  #   Condition: IsStaging
+  #   Properties:
+  #     HostedZoneName: staging.enpalm.se.
+  #     Name: !Sub "${service}.staging.enpalm.se"
+  #     Type: A
+  #     AliasTarget:
+  #       DNSName: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/
+  #       HostedZoneId: Z2FDTNDATAQYW2
+
+  StagingApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          title: "Staging API"
+          version: "1.0"
+        paths:
+          /hello:
+            get:
+              x-amazon-apigateway-integration:
+                type: "aws_proxy"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloWorldFunction.Arn}/invocations"
+        # Add more API configuration here
+      EndpointConfiguration: REGIONAL
+      Domain:
+        DomainName: service.staging.enpalm.se
+        CertificateArn: arn:aws:acm:eu-west-1:882782905959:certificate/15e827bc-7b76-4026-a656-db6971dfa689
+        Route53:
+          HostedZoneName: staging.enpalm.se
 
 Outputs:
-  HelloWorldApi:
+  StagingApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  ServiceStagingDomain:
-    Description: "DNS name"
-    Value: !Ref StaginDomainRecord
+    Value: !Sub "https://${StagingApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"

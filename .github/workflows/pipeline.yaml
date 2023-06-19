@@ -87,10 +87,10 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - name: Add environment to parameters file
-        shell: bash
-        run: |
-          echo "environment=dev" >> parameters.txt
+      # - name: Add environment to parameters file
+      #   shell: bash
+      #   run: |
+      #     echo "environment=dev" >> parameters.txt
 
       - name: Deploy to feature stack in the staging account
         shell: bash
@@ -100,7 +100,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --parameter-overrides $(cat parameters.txt) \
+            --parameter-overrides Service=$(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') EnvName=Staging
             --tags environment=dev
 
   build-and-package:
@@ -180,10 +180,11 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - name: Add environment to parameters file
-        shell: bash
-        run: |
-          echo "environment=staging" >> parameters.txt
+      # - name: Add environment to parameters file
+      #   shell: bash
+      #   run: |
+      #     echo "environment=staging" >> parameters.txt
+      #     echo "CertificateARN=$(aws ssm get-parameter --name /Staging/API/CertificateARN --query "Parameter.Value" --output text)" >> $GITHUB_ENV
 
       - name: Deploy to staging account
         run: |
@@ -193,7 +194,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --parameter-overrides $(cat parameters.txt) \
+            --parameter-overrides Service=${{ github.event.repository.name }} EnvName=Staging
             --tags environment=staging
 
   integration-test:
@@ -230,10 +231,11 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - name: Add environment to parameters file
-        shell: bash
-        run: |
-          echo "environment=prod" >> parameters.txt
+      # - name: Add environment to parameters file
+      #   shell: bash
+      #   run: |
+      #     echo "environment=prod" >> parameters.txt
+      #     echo "CertificateARN=$(aws ssm get-parameter --name /Prod/API/CertificateARN --query "Parameter.Value" --output text)" >> $GITHUB_ENV
 
       - name: Deploy to production account
         run: |
@@ -243,5 +245,6 @@ jobs:
             --region ${PROD_REGION} \
             --s3-bucket ${PROD_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --parameter-overrides $(cat parameters.txt) \
+            --parameter-overrides Service=${{ github.event.repository.name }} EnvName=Prod
+            --parameter-overrides $(cat parameters.txt) CertificateARN=${CertificateARN} \
             --tags environment=prod

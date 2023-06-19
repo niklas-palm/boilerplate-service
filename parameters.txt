@@ -1,1 +1,1 @@
-service=my-service
+Service=my-service

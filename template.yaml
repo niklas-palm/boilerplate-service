@@ -6,26 +6,23 @@ Description: >
   Sample SAM Template for boilerplate-service
 
 Parameters:
-  environment:
+  EnvName:
     Description: Environment type.
     Type: String
-    AllowedValues: [dev, staging, prod]
-    ConstraintDescription: must specify dev, staging, or prod
-  service:
-    Description: Service name
+    AllowedValues:
+      - Staging
+      - Prod
+    ConstraintDescription: must specify Staging or Prod
+  Service:
+    Description: Service name.
     Type: String
-
-Conditions:
-  IsProd: !Equals [!Ref environment, prod]
-  IsStaging: !Equals [!Ref environment, staging]
-  IsDeV: !Equals [!Ref environment, dev]
 
 Globals:
   Function:
     Timeout: 3
 
 Resources:
-  HelloWorldFunction:
+  MyFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: hello-world/
@@ -36,7 +33,7 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          POWERTOOLS_SERVICE_NAME: !Ref service
+          POWERTOOLS_SERVICE_NAME: !Ref Service
           POWERTOOLS_METRICS_NAMESPACE: boilerplate-namespace
           LOG_LEVEL: INFO
       Events:
@@ -58,12 +55,11 @@ Resources:
   MyFunctionLogGroup: #To ensure Logs are deleted after a while.
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${HelloWorldFunction}"
+      LogGroupName: !Sub "/aws/lambda/${MyFunction}"
       RetentionInDays: 7
 
   StagingApi:
     Type: AWS::Serverless::Api
-    Condition: IsStaging
     Properties:
       StageName: prod
       DefinitionBody:
@@ -77,18 +73,21 @@ Resources:
               x-amazon-apigateway-integration:
                 type: "aws_proxy"
                 httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloWorldFunction.Arn}/invocations"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyFunction.Arn}/invocations"
         # Add more API configuration here
-      EndpointConfiguration: REGIONAL
+      EndpointConfiguration:
+        Type: REGIONAL
+      # Domain:
+      #   DomainName: !Sub "${Service}.${HostedZone}"
+      #   CertificateArn: !Ref certificate
+      #   Route53:
+      #     HostedZoneName: !Ref HostedZone
       Domain:
-        DomainName: !Sub "${service}.staging.enpalm.se"
-        CertificateArn: arn:aws:acm:eu-west-1:882782905959:certificate/15e827bc-7b76-4026-a656-db6971dfa689
+        DomainName: !Sub "${Service}.${EnvName}.enpalm.se"
+        CertificateArn: !Sub "{{resolve:ssm:/${EnvName}/API/CertificateARN}}"
         Route53:
-          HostedZoneName: staging.enpalm.se.
+          HostedZoneName: !Sub "${EnvName}.enpalm.se."
 
 Outputs:
-  StagingApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${StagingApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
   ServiceDomainName:
-    Value: !Sub "https://${service}.staging.enpalm.se"
+    Value: !Sub "${Service}.${EnvName}.enpalm.se"

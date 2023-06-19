@@ -12,7 +12,8 @@ Parameters:
     AllowedValues:
       - staging
       - prod
-    ConstraintDescription: must specify staging or prod
+      - dev
+    ConstraintDescription: must specify staging, dev or prod
   service:
     Description: Service name.
     Type: String

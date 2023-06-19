@@ -6,14 +6,14 @@ Description: >
   Sample SAM Template for boilerplate-service
 
 Parameters:
-  EnvName:
+  environment:
     Description: Environment type.
     Type: String
     AllowedValues:
-      - Staging
-      - Prod
-    ConstraintDescription: must specify Staging or Prod
-  Service:
+      - staging
+      - prod
+    ConstraintDescription: must specify staging or prod
+  service:
     Description: Service name.
     Type: String
 
@@ -33,7 +33,7 @@ Resources:
       Tracing: Active
       Environment:
         Variables:
-          POWERTOOLS_SERVICE_NAME: !Ref Service
+          POWERTOOLS_SERVICE_NAME: !Ref service
           POWERTOOLS_METRICS_NAMESPACE: boilerplate-namespace
           LOG_LEVEL: INFO
       Events:
@@ -77,17 +77,13 @@ Resources:
         # Add more API configuration here
       EndpointConfiguration:
         Type: REGIONAL
-      # Domain:
-      #   DomainName: !Sub "${Service}.${HostedZone}"
-      #   CertificateArn: !Ref certificate
-      #   Route53:
-      #     HostedZoneName: !Ref HostedZone
+
       Domain:
-        DomainName: !Sub "${Service}.${EnvName}.enpalm.se"
-        CertificateArn: !Sub "{{resolve:ssm:/${EnvName}/API/CertificateARN}}"
+        DomainName: !Sub "${service}.${environment}.enpalm.se"
+        CertificateArn: !Sub "{{resolve:ssm:/${environment}/API/CertificateARN}}"
         Route53:
-          HostedZoneName: !Sub "${EnvName}.enpalm.se."
+          HostedZoneName: !Sub "${environment}.enpalm.se."
 
 Outputs:
   ServiceDomainName:
-    Value: !Sub "${Service}.${EnvName}.enpalm.se"
+    Value: !Sub "${service}.${environment}.enpalm.se"

@@ -87,11 +87,6 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      # - name: Add environment to parameters file
-      #   shell: bash
-      #   run: |
-      #     echo "environment=dev" >> parameters.txt
-
       - name: Deploy to feature stack in the staging account
         shell: bash
         run: |
@@ -100,7 +95,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --parameter-overrides Service=$(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') EnvName=Staging
+            --parameter-overrides service=$(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') environment=staging
             --tags environment=dev
 
   build-and-package:
@@ -180,12 +175,6 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      # - name: Add environment to parameters file
-      #   shell: bash
-      #   run: |
-      #     echo "environment=staging" >> parameters.txt
-      #     echo "CertificateARN=$(aws ssm get-parameter --name /Staging/API/CertificateARN --query "Parameter.Value" --output text)" >> $GITHUB_ENV
-
       - name: Deploy to staging account
         run: |
           sam deploy --stack-name ${TESTING_STACK_NAME} \
@@ -194,7 +183,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --parameter-overrides Service=${{ github.event.repository.name }} EnvName=Staging
+            --parameter-overrides service=${{ github.event.repository.name }} environment=staging \
             --tags environment=staging
 
   integration-test:
@@ -210,8 +199,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: [integration-test]
     runs-on: ubuntu-latest
-    # Configure GitHub Action Environment to have a manual approval step before deployment to production
-    # https://docs.github.com/en/actions/reference/environments
     environment: prod
     steps:
       - uses: actions/checkout@v3
@@ -231,12 +218,6 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      # - name: Add environment to parameters file
-      #   shell: bash
-      #   run: |
-      #     echo "environment=prod" >> parameters.txt
-      #     echo "CertificateARN=$(aws ssm get-parameter --name /Prod/API/CertificateARN --query "Parameter.Value" --output text)" >> $GITHUB_ENV
-
       - name: Deploy to production account
         run: |
           sam deploy --stack-name ${PROD_STACK_NAME} \
@@ -245,6 +226,5 @@ jobs:
             --region ${PROD_REGION} \
             --s3-bucket ${PROD_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --parameter-overrides Service=${{ github.event.repository.name }} EnvName=Prod
-            --parameter-overrides $(cat parameters.txt) CertificateARN=${CertificateARN} \
+            --parameter-overrides service=${{ github.event.repository.name }} environment=prod \
             --tags environment=prod

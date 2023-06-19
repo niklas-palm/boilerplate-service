@@ -95,7 +95,7 @@ jobs:
             --region ${TESTING_REGION} \
             --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
             --no-fail-on-empty-changeset \
-            --parameter-overrides service=$(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') environment=staging
+            --parameter-overrides service=$(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') environment=staging \
             --tags environment=dev
 
   build-and-package:

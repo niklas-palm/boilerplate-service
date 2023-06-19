@@ -11,18 +11,9 @@ on:
 
 env:
   SAM_TEMPLATE: template.yaml
-  TESTING_STACK_NAME: boilerplate-service-staging
-  TESTING_PIPELINE_EXECUTION_ROLE: arn:aws:iam::882782905959:role/enpalm-staging-github-actions-role
-  # TESTING_CLOUDFORMATION_EXECUTION_ROLE: my-cloudformation-execution-role
-  TESTING_ARTIFACTS_BUCKET: boilerplate-artefact-staging
-  TESTING_REGION: eu-west-1
-
-  # testing "sam package" and "sam deploy" commands.
-  PROD_STACK_NAME: boilerplate-service-prod
+  REGION: eu-west-1
+  STAGING_PIPELINE_EXECUTION_ROLE: arn:aws:iam::882782905959:role/enpalm-staging-github-actions-role
   PROD_PIPELINE_EXECUTION_ROLE: arn:aws:iam::764305725019:role/enpalm-prod-github-actions-role
-  # PROD_CLOUDFORMATION_EXECUTION_ROLE: my-dev-cfn-execution-role
-  PROD_ARTIFACTS_BUCKET: boilerplate-artefact-prod
-  PROD_REGION: eu-west-1
 
 permissions:
   id-token: write
@@ -48,8 +39,8 @@ jobs:
       - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
-          aws-region: ${{ env.TESTING_REGION }}
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.REGION }}
+          role-to-assume: ${{ env.STAGING_PIPELINE_EXECUTION_ROLE }}
           role-session-name: testing-packaging
           role-duration-seconds: 3600
           role-skip-session-tagging: true
@@ -60,7 +51,7 @@ jobs:
         run: |
           sam delete \
             --stack-name $(echo ${FEATURE_BRANCH_NAME##*/} | tr -cd '[a-zA-Z0-9-]') \
-            --region ${TESTING_REGION} \
+            --region ${REGION} \
             --no-prompts
 
   build-and-deploy-feature:
@@ -81,21 +72,25 @@ jobs:
       - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
-          aws-region: ${{ env.TESTING_REGION }}
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.REGION }}
+          role-to-assume: ${{ env.STAGING_PIPELINE_EXECUTION_ROLE }}
           role-session-name: feature-deployment
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
+      - name: Set feature branch env
+        shell: bash
+        run: echo "FEATURE_BRANCH_NAME=$(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]')" >> $GITHUB_ENV
+
       - name: Deploy to feature stack in the staging account
         shell: bash
         run: |
-          sam deploy --stack-name $(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') \
+          sam deploy --stack-name $FEATURE_BRANCH_NAME \
             --capabilities CAPABILITY_IAM \
-            --region ${TESTING_REGION} \
-            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
+            --region ${REGION} \
+            --resolve-s3 \
             --no-fail-on-empty-changeset \
-            --parameter-overrides service=$(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]') environment=dev \
+            --parameter-overrides service=$FEATURE_BRANCH_NAME environment=dev \
             --tags environment=dev
 
   build-and-package:
@@ -114,8 +109,8 @@ jobs:
       - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
-          aws-region: ${{ env.TESTING_REGION }}
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.REGION }}
+          role-to-assume: ${{ env.STAGING_PIPELINE_EXECUTION_ROLE }}
           role-session-name: testing-packaging
           role-duration-seconds: 3600
           role-skip-session-tagging: true
@@ -123,8 +118,8 @@ jobs:
       - name: Upload artifacts to stsaging artifact buckets
         run: |
           sam package \
-            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
-            --region ${TESTING_REGION} \
+            --resolve-s3 \
+            --region ${REGION} \
             --output-template-file packaged-testing.yaml
 
       - uses: actions/upload-artifact@v3
@@ -135,7 +130,7 @@ jobs:
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
-          aws-region: ${{ env.PROD_REGION }}
+          aws-region: ${{ env.REGION }}
           role-to-assume: ${{ env.PROD_PIPELINE_EXECUTION_ROLE }}
           role-session-name: prod-packaging
           role-duration-seconds: 3600
@@ -144,8 +139,8 @@ jobs:
       - name: Upload artifacts to production artifact buckets
         run: |
           sam package \
-            --s3-bucket ${PROD_ARTIFACTS_BUCKET} \
-            --region ${PROD_REGION} \
+            --resolve-s3 \
+            --region ${REGION} \
             --output-template-file packaged-prod.yaml
 
       - uses: actions/upload-artifact@v3
@@ -169,19 +164,19 @@ jobs:
       - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
-          aws-region: ${{ env.TESTING_REGION }}
-          role-to-assume: ${{ env.TESTING_PIPELINE_EXECUTION_ROLE }}
+          aws-region: ${{ env.REGION }}
+          role-to-assume: ${{ env.STAGING_PIPELINE_EXECUTION_ROLE }}
           role-session-name: testing-deployment
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
       - name: Deploy to staging account
         run: |
-          sam deploy --stack-name ${TESTING_STACK_NAME} \
+          sam deploy --stack-name ${{github.event.repository.name}}-staging \
             --template packaged-testing.yaml \
             --capabilities CAPABILITY_IAM \
-            --region ${TESTING_REGION} \
-            --s3-bucket ${TESTING_ARTIFACTS_BUCKET} \
+            --region ${REGION} \
+            --resolve-s3 \
             --no-fail-on-empty-changeset \
             --parameter-overrides service=${{ github.event.repository.name }} environment=staging \
             --tags environment=staging
@@ -212,7 +207,7 @@ jobs:
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
-          aws-region: ${{ env.PROD_REGION }}
+          aws-region: ${{ env.REGION }}
           role-to-assume: ${{ env.PROD_PIPELINE_EXECUTION_ROLE }}
           role-session-name: prod-deployment
           role-duration-seconds: 3600
@@ -220,11 +215,11 @@ jobs:
 
       - name: Deploy to production account
         run: |
-          sam deploy --stack-name ${PROD_STACK_NAME} \
+          sam deploy --stack-name ${{github.event.repository.name}}-prod \
             --template packaged-prod.yaml \
             --capabilities CAPABILITY_IAM \
-            --region ${PROD_REGION} \
-            --s3-bucket ${PROD_ARTIFACTS_BUCKET} \
+            --region ${REGION} \
+            --resolve-s3 \
             --no-fail-on-empty-changeset \
             --parameter-overrides service=${{ github.event.repository.name }} environment=prod \
             --tags environment=prod

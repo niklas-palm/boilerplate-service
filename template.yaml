@@ -78,7 +78,6 @@ Resources:
         # Add more API configuration here
       EndpointConfiguration:
         Type: REGIONAL
-
       Domain:
         DomainName: !Sub "${service}.${environment}.enpalm.se"
         CertificateArn: !Sub "{{resolve:ssm:/${environment}/API/CertificateARN}}"
@@ -87,4 +86,4 @@ Resources:
 
 Outputs:
   ServiceDomainName:
-    Value: !Sub "${service}.${environment}.enpalm.se"
+    Value: !Sub "https://${service}.${environment}.enpalm.se"

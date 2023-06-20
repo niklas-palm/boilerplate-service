@@ -10,7 +10,6 @@ on:
       - "feature**"
 
 env:
-  SAM_TEMPLATE: template.yaml
   REGION: eu-west-1
   STAGING_PIPELINE_EXECUTION_ROLE: arn:aws:iam::882782905959:role/enpalm-staging-github-actions-role
   PROD_PIPELINE_EXECUTION_ROLE: arn:aws:iam::764305725019:role/enpalm-prod-github-actions-role
@@ -41,18 +40,16 @@ jobs:
         with:
           aws-region: ${{ env.REGION }}
           role-to-assume: ${{ env.STAGING_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: testing-packaging
+          role-session-name: staging-packaging
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
       - name: Delete feature branch stack
         env:
-          FEATURE_BRANCH_NAME: ${{ github.event.ref }}
+          SERVICE: ${{ github.event.ref }}
+          ENVIRONMENT: dev
         run: |
-          sam delete \
-            --stack-name $(echo ${FEATURE_BRANCH_NAME##*/} | tr -cd '[a-zA-Z0-9-]') \
-            --region ${REGION} \
-            --no-prompts
+          make delete
 
   build-and-deploy-feature:
     # this stage is triggered only for feature branches (feature*),
@@ -67,7 +64,8 @@ jobs:
       - uses: aws-actions/setup-sam@v2
         with:
           use-installer: true
-      - run: sam build --template ${SAM_TEMPLATE} --use-container
+      - run: |
+          make build
 
       - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -83,15 +81,13 @@ jobs:
         run: echo "FEATURE_BRANCH_NAME=$(echo ${GITHUB_REF##*/} | tr -cd '[a-zA-Z0-9-]')" >> $GITHUB_ENV
 
       - name: Deploy to feature stack in the staging account
+        env:
+          SERVICE: ${{ env.FEATURE_BRANCH_NAME }}
+          ENVIRONMENT: dev
+          TEMPLATE: template.yaml
         shell: bash
         run: |
-          sam deploy --stack-name $FEATURE_BRANCH_NAME \
-            --capabilities CAPABILITY_IAM \
-            --region ${REGION} \
-            --resolve-s3 \
-            --no-fail-on-empty-changeset \
-            --parameter-overrides service=$FEATURE_BRANCH_NAME environment=dev \
-            --tags environment=dev
+          make deploy
 
   build-and-package:
     if: github.ref == 'refs/heads/main'
@@ -104,28 +100,28 @@ jobs:
           use-installer: true
 
       - name: Build resources
-        run: sam build --template ${SAM_TEMPLATE} --use-container
+        run: |
+          make build
 
       - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-region: ${{ env.REGION }}
           role-to-assume: ${{ env.STAGING_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: testing-packaging
+          role-session-name: staging-packaging
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
-      - name: Upload artifacts to stsaging artifact buckets
+      - name: Upload artifacts to staging artifact buckets
+        env:
+          ENVIRONMENT: staging
         run: |
-          sam package \
-            --resolve-s3 \
-            --region ${REGION} \
-            --output-template-file packaged-testing.yaml
+          make package
 
       - uses: actions/upload-artifact@v3
         with:
-          name: packaged-testing.yaml
-          path: packaged-testing.yaml
+          name: packaged-staging.yaml
+          path: packaged-staging.yaml
 
       - name: Assume the prod pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -137,11 +133,10 @@ jobs:
           role-skip-session-tagging: true
 
       - name: Upload artifacts to production artifact buckets
+        env:
+          ENVIRONMENT: prod
         run: |
-          sam package \
-            --resolve-s3 \
-            --region ${REGION} \
-            --output-template-file packaged-prod.yaml
+          make package
 
       - uses: actions/upload-artifact@v3
         with:
@@ -159,27 +154,24 @@ jobs:
           use-installer: true
       - uses: actions/download-artifact@v3
         with:
-          name: packaged-testing.yaml
+          name: packaged-staging.yaml
 
       - name: Assume the staging pipeline user role
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-region: ${{ env.REGION }}
           role-to-assume: ${{ env.STAGING_PIPELINE_EXECUTION_ROLE }}
-          role-session-name: testing-deployment
+          role-session-name: staging-deployment
           role-duration-seconds: 3600
           role-skip-session-tagging: true
 
       - name: Deploy to staging account
+        env:
+          SERVICE: ${{github.event.repository.name}}
+          ENVIRONMENT: staging
+          TEMPLATE: packaged-staging.yaml
         run: |
-          sam deploy --stack-name ${{github.event.repository.name}}-staging \
-            --template packaged-testing.yaml \
-            --capabilities CAPABILITY_IAM \
-            --region ${REGION} \
-            --resolve-s3 \
-            --no-fail-on-empty-changeset \
-            --parameter-overrides service=${{ github.event.repository.name }} environment=staging \
-            --tags environment=staging
+          make deploy
 
   integration-test:
     if: github.ref == 'refs/heads/main'
@@ -214,12 +206,9 @@ jobs:
           role-skip-session-tagging: true
 
       - name: Deploy to production account
+        env:
+          SERVICE: ${{github.event.repository.name}}
+          ENVIRONMENT: prod
+          TEMPLATE: packaged-prod.yaml
         run: |
-          sam deploy --stack-name ${{github.event.repository.name}}-prod \
-            --template packaged-prod.yaml \
-            --capabilities CAPABILITY_IAM \
-            --region ${REGION} \
-            --resolve-s3 \
-            --no-fail-on-empty-changeset \
-            --parameter-overrides service=${{ github.event.repository.name }} environment=prod \
-            --tags environment=prod
+          make deploy

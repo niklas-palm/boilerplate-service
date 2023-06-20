@@ -1,25 +1,54 @@
 .ONESHELL:
 SHELL := /bin/bash
-NAME := $(shell whoami)
-DIR := $(shell basename $(shell /bin/pwd))
-STACKNAME := $(NAME)-$(DIR)
-REGION := eu-west-1
 
-# .PHONY: all 
+.PHONY: init.dev
+init.dev: ##=> Sets the development environment
+	@echo "\nSetting up dev environment for feature branch...\n"
+	$(eval export NAME := $(shell whoami))
+	$(eval export SERVICE := $(NAME)-$(shell basename $(shell /bin/pwd)))
+	$(eval export ENVIRONMENT := dev)
+	$(eval export TEMPLATE := template.yaml)
 
-build: ##=> Downloads all dependencies and builds a deployable artefact
+build.fast: ##=> Downloads all dependencies and builds resources using your locally installed dependencies
 	sam build
 
-deploy: ##=> Deploys the artefacts from the previous build
-	@echo "\nUsing inferred name \"$(STACKNAME)\" to prefix resources \n"
+build: ##=> Downloads all dependencies and builds resources within a container
+	sam build --use-container
 
-	sam deploy --stack-name $(STACKNAME) \
+# Deploy target
+.PHONY: deploy
+deploy: ##=> Deploys the artefacts from the previous build
+	@echo Deploying with parameters:
+	@echo Service name: $(SERVICE)
+	@echo Environment: $(ENVIRONMENT)
+	
+	sam deploy --stack-name $(SERVICE)-$(ENVIRONMENT) \
+		--template $(TEMPLATE) \
 		--resolve-s3 \
 		--capabilities CAPABILITY_IAM \
 		--region $(REGION) \
 		--no-fail-on-empty-changeset \
-		--parameter-overrides service=$(STACKNAME) environment=dev \
-		--tags dev=$(NAME) environment=dev 
+		--parameter-overrides service=$(SERVICE) environment=$(ENVIRONMENT) \
+		--tags service=$(SERVICE) environment=$(ENVIRONMENT)
+
+.PHONY: delete
+delete: ##=> Deletes the cloudformation stack
+	sam delete \
+		--stack-name $(SERVICE)-$(ENVIRONMENT) \
+		--region $(REGION) \
+		--no-prompts
+
+.PHONY: package
+package: ##=> Packages template and stores in S3
+	sam package \
+		--resolve-s3 \
+		--region $(REGION) \
+		--output-template-file packaged-$(ENVIRONMENT).yaml
+
+
+##################################
+### Used for local development ###
+##################################
 
 sync: ##=> Enables hot-reloading, updating the stack's serverless resources' code on save.
 	@echo "\nStarting hot-reloading with resources in stack: \"$(STACKNAME)\"\n"
@@ -35,14 +64,3 @@ logs.tail: ##=> Starts tailing the logs
 	@echo "\nStarting to tail the logs from stack: \"$(STACKNAME)\"\n"
 
 	sam logs --stack-name $(STACKNAME)
-
-delete: ##=> Deletes the cloudformation stack
-	@echo "\nDeleting dev stack with name \"$(STACKNAME)\"\n"
-
-	sam delete \
-		--stack-name $(STACKNAME) \
-		--region $(REGION) \
-		--no-prompts
-		
-
-

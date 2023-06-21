@@ -1,13 +1,20 @@
 .ONESHELL:
 SHELL := /bin/bash
 
-.PHONY: init.dev
-init.dev: ##=> Sets the development environment
-	@echo "\nSetting up dev environment for feature branch...\n"
-	$(eval export NAME := $(shell whoami))
-	$(eval export SERVICE := $(NAME)-$(shell basename $(shell /bin/pwd)))
-	$(eval export ENVIRONMENT := dev)
-	$(eval export TEMPLATE := template.yaml)
+## Sets DEFAULTS for dev environment (Parameters are overwritten if present in environment)
+NAME ?= $(shell whoami)
+SERVICE ?= $(NAME)-$(shell basename $(shell /bin/pwd))
+ENVIRONMENT ?= dev
+REGION ?= eu-west-1
+TEMPLATE ?= template.yaml
+
+export NAME
+export SERVICE
+export ENVIRONMENT
+export REGION
+export TEMPLATE
+
+
 
 build.fast: ##=> Downloads all dependencies and builds resources using your locally installed dependencies
 	sam build
@@ -49,18 +56,31 @@ package: ##=> Packages template and stores in S3
 ##################################
 ### Used for local development ###
 ##################################
+.PHONY: init.dev
+init.dev: ##=> Sets the development environment
+	$(eval export NAME := $(shell whoami))
+	$(eval export SERVICE := $(NAME)-$(shell basename $(shell /bin/pwd)))
+	$(eval export ENVIRONMENT := dev)
+	$(eval export REGION := eu-west-1)
+	$(eval export TEMPLATE := template.yaml)
 
+.PHONY: sync.code
 sync: ##=> Enables hot-reloading, updating the stack's serverless resources' code on save.
-	@echo "\nStarting hot-reloading with resources in stack: \"$(STACKNAME)\"\n"
+	@echo "Starting hot-reloading with resources in stack: \"$(SERVICE)-$(ENVIRONMENT)\""
 
-	sam sync --code --watch --stack-name $(STACKNAME)
+	sam sync --code --watch --stack-name $(SERVICE)-$(ENVIRONMENT)
 
+.PHONY: logs
 logs: ##=> Fetchest the latest logs
-	@echo "\nFetching latest logs from stack: \"$(STACKNAME)\"\n"
+	@echo "Fetching latest logs from stack: \"$(SERVICE)-$(ENVIRONMENT)\""
 
-	sam logs --stack-name $(STACKNAME)
+	sam logs --stack-name $(SERVICE)-$(ENVIRONMENT)
 
+.PHONY: tail.logs
 logs.tail: ##=> Starts tailing the logs
-	@echo "\nStarting to tail the logs from stack: \"$(STACKNAME)\"\n"
+	@echo "\nStarting to tail the logs from stack: \"$(SERVICE)-$(ENVIRONMENT)\"\n"
 
-	sam logs --stack-name $(STACKNAME)
+	sam logs --stack-name $(SERVICE)-$(ENVIRONMENT)
+
+deploy.dev: build.fast deploy
+

@@ -14,7 +14,12 @@ export ENVIRONMENT
 export REGION
 export TEMPLATE
 
-
+test.all: export DIRECTORIES := $(sort $(dir $(wildcard ./functions/*/))) 
+test.all:
+	for directory in $(DIRECTORIES); do \
+		cd $$directory && npm run test ; \
+	done	
+	
 
 build.fast: ##=> Downloads all dependencies and builds resources using your locally installed dependencies
 	sam build
@@ -56,13 +61,6 @@ package: ##=> Packages template and stores in S3
 ##################################
 ### Used for local development ###
 ##################################
-.PHONY: init.dev
-init.dev: ##=> Sets the development environment
-	$(eval export NAME := $(shell whoami))
-	$(eval export SERVICE := $(NAME)-$(shell basename $(shell /bin/pwd)))
-	$(eval export ENVIRONMENT := dev)
-	$(eval export REGION := eu-west-1)
-	$(eval export TEMPLATE := template.yaml)
 
 .PHONY: sync.code
 sync: ##=> Enables hot-reloading, updating the stack's serverless resources' code on save.

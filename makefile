@@ -27,8 +27,6 @@ build.fast: ##=> Downloads all dependencies and builds resources using your loca
 build: ##=> Downloads all dependencies and builds resources within a container
 	sam build --use-container
 
-# Deploy target
-.PHONY: deploy
 deploy: ##=> Deploys the artefacts from the previous build
 	@echo Deploying with parameters:
 	@echo Service name: $(SERVICE)
@@ -43,14 +41,12 @@ deploy: ##=> Deploys the artefacts from the previous build
 		--parameter-overrides service=$(SERVICE) environment=$(ENVIRONMENT) \
 		--tags service=$(SERVICE) environment=$(ENVIRONMENT)
 
-.PHONY: delete
 delete: ##=> Deletes the cloudformation stack
 	sam delete \
 		--stack-name $(SERVICE)-$(ENVIRONMENT) \
 		--region $(REGION) \
 		--no-prompts
 
-.PHONY: package
 package: ##=> Packages template and stores in S3
 	sam package \
 		--resolve-s3 \
@@ -62,19 +58,16 @@ package: ##=> Packages template and stores in S3
 ### Used for local development ###
 ##################################
 
-.PHONY: sync.code
 sync: ##=> Enables hot-reloading, updating the stack's serverless resources' code on save.
 	@echo "Starting hot-reloading with resources in stack: \"$(SERVICE)-$(ENVIRONMENT)\""
 
 	sam sync --code --watch --stack-name $(SERVICE)-$(ENVIRONMENT)
 
-.PHONY: logs
 logs: ##=> Fetchest the latest logs
 	@echo "Fetching latest logs from stack: \"$(SERVICE)-$(ENVIRONMENT)\""
 
 	sam logs --stack-name $(SERVICE)-$(ENVIRONMENT)
 
-.PHONY: tail.logs
 logs.tail: ##=> Starts tailing the logs
 	@echo "\nStarting to tail the logs from stack: \"$(SERVICE)-$(ENVIRONMENT)\"\n"
 

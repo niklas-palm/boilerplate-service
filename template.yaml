@@ -67,7 +67,7 @@ Resources:
         Fn::Transform:
           Name: "AWS::Include"
           Parameters:
-            Location: "./openapi.yaml"
+            Location: "./openapi.yml"
       EndpointConfiguration:
         Type: REGIONAL
       Domain:

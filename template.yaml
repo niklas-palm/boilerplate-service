@@ -64,18 +64,10 @@ Resources:
     Properties:
       StageName: prod
       DefinitionBody:
-        swagger: "2.0"
-        info:
-          title: "Staging API"
-          version: "1.0"
-        paths:
-          /:
-            get:
-              x-amazon-apigateway-integration:
-                type: "aws_proxy"
-                httpMethod: "POST"
-                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyFunction.Arn}/invocations"
-        # Add more API configuration here
+        Fn::Transform:
+          Name: "AWS::Include"
+          Parameters:
+            Location: "./openapi.yaml"
       EndpointConfiguration:
         Type: REGIONAL
       Domain:

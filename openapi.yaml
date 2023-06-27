@@ -1,0 +1,23 @@
+openapi: "3.0.2"
+info:
+  title:
+    Fn::Sub: "${AWS::StackName}"
+  version: "1.0"
+paths:
+  /:
+    get:
+      summary: Summary of what this method/path does.
+      responses:
+        200:
+          description: Description of what is returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyFunction.Arn}/invocations"

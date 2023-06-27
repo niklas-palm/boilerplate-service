@@ -1,4 +1,4 @@
-# Boilerplat-service
+# Boilerplate-service
 
 Boilerplate for getting quickly getting started with multi-account deployments (staging + prod), using Github Actions and AWS SAM.
 
